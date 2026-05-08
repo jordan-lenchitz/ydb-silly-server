@@ -1,6 +1,10 @@
-# 🚀 YottaDB Stupid Server (YSS)
+# 🚀 YottaDB silly server (yss)
 
-A blazing fast, 100% pure MUMPS backend for modern web applications. Zero middleware. Zero bloat. 100% HONK.
+blazing fast 100% MUMPS backend for modern web apps
+
+0 middleware
+0 bloat
+100% HONK
 
 ## 📜 The 7 Core Tenets
 1. **ALWAYS OBSCURE MUMPS:** You will not find `$DATA` here. Only `$D`. Single letters only. Fear the abbreviation.
