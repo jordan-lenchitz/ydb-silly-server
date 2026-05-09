@@ -17,7 +17,7 @@ blazing fast 100% MUMPS backend for modern web apps
 
 ## 🛠️ Installation & Usage
 
-1. **Install YottaDB.** Ensure UTF-8 mode is active (`export ydb_chset=utf-8`).
+1. [Install YottaDB](https://download.yottadb.com/ydbinstall.sh) and ensure UTF-8 mode is active (`export ydb_chset=utf-8`).
 2. Clone this repository into your YottaDB routines directory.
 3. Open your terminal and enter the MUMPS prompt:
    ```bash
