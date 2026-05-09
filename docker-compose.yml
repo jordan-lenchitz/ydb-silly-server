@@ -1,0 +1,15 @@
+version: '3'
+services:
+  ydb-backend:
+    build: .
+    ports:
+      - "8080:8080" # API
+      - "1337:1337" # SQL (Octo)
+      - "9080:9080" # GUI
+    volumes:
+      - ./ydb-data:/data
+    environment:
+      - ydb_dir=/data
+      - PORT=8080
+    ipc: host
+    restart: unless-stopped
