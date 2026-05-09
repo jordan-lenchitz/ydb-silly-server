@@ -2,11 +2,11 @@
   "name": "ydb-backend",
   "version": "1.0.0",
   "description": "High-Performance Native YottaDB Cloud Proxy",
-  "main": "index.js",
+  "main": "JS/index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js",
+    "start": "node JS/index.js",
+    "dev": "node --watch JS/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
