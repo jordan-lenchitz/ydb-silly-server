@@ -7,8 +7,8 @@ from google.adk.agents import LlmAgent
 from google.adk.runners import Runner
 from google.adk.sessions.in_memory_session_service import InMemorySessionService
 
-# use key from agent_agent.py
-os.environ["GOOGLE_API_KEY"] = "AIzaSyA2fK50l0mHIxrfDd-YFxLy5uxcXgvIFrM"
+# use key from environment
+os.environ["GOOGLE_API_KEY"] = os.environ.get("GOOGLE_API_KEY", "")
 
 YDB_PROXY_URL = "http://localhost:8080/api/global"
 
