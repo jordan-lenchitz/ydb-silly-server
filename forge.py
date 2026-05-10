@@ -3,12 +3,17 @@ import os
 import json
 import random
 import requests
+import sys
 from google.adk.agents import LlmAgent
 from google.adk.runners import Runner
 from google.adk.sessions.in_memory_session_service import InMemorySessionService
 
 # use key from environment
-os.environ["GOOGLE_API_KEY"] = os.environ.get("GOOGLE_API_KEY", "")
+api_key = os.environ.get("GOOGLE_API_KEY")
+if not api_key:
+    print("error: GOOGLE_API_KEY not found in environment")
+    sys.exit(1)
+os.environ["GOOGLE_API_KEY"] = api_key
 
 YDB_PROXY_URL = "http://localhost:8080/api/global"
 
