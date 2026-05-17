@@ -23,8 +23,8 @@ The proxy acts as a bridge between modern RESTful microservices and the raw powe
 ### 📂 Structure
 - `JS/`: Node.js application logic.
 - `MUMPS/`: Native YottaDB routines.
-- `ydb-data/`: Persistent database storage.
-- `logs/`: Application and installation logs.
+- `ydb-data/`: Persistent database storage (untracked, managed by Docker volumes).
+- `logs/`: Application and installation logs (untracked, generated at runtime).
 
 ### 🏃 Running
 ```bash
