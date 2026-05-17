@@ -1,4 +1,4 @@
-# 🚀 yottadb silly server (YSS)
+# 🚀 [YottaDB](https://yottadb.com/) silly server (YSS)
 
 100% silly high-performance Node.js proxy for YottaDB
 
