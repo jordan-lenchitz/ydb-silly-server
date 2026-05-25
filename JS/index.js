@@ -93,15 +93,20 @@ engine.init();
 const getVMState = (id) => {
     if (!id) return null;
     try {
-        const data = engine.db.get("YDBCLOUD", ["VMS", id]);
-        return data ? JSON.parse(data) : null;
+        const state = {
+            status: engine.db.function("GETVM^VMMGR", id, "status"),
+            instanceId: engine.db.function("GETVM^VMMGR", id, "instanceId"),
+            provisionedAt: engine.db.function("GETVM^VMMGR", id, "provisionedAt"),
+            provisioned: engine.db.function("GETVM^VMMGR", id, "provisioned") === "1",
+            metadata: {
+                internalIp: engine.db.function("GETMETA^VMMGR", id, "internalIp"),
+                port: parseInt(engine.db.function("GETMETA^VMMGR", id, "port")),
+                region: engine.db.function("GETMETA^VMMGR", id, "region"),
+                cpuLimit: engine.db.function("GETMETA^VMMGR", id, "cpuLimit")
+            }
+        };
+        return state.status ? state : null;
     } catch { return null; }
-};
-
-const setVMState = (id, state) => {
-    try {
-        engine.db.set("YDBCLOUD", ["VMS", id], JSON.stringify(state));
-    } catch (err) { console.error("Failed to persist VM state", err); }
 };
 
 // API Endpoints
@@ -114,7 +119,7 @@ app.get('/api/vm/status', (req, res) => {
         system: {
             engine: engine.db.dbversion(),
             nativeJob: engine.jobId,
-            uptime: process.uptime()
+            uptime: engine.db.function("UPTIME^SYS")
         }
     });
 });
@@ -123,33 +128,15 @@ app.post('/api/vm/provision', (req, res) => {
     const newId = `ydb-${Math.random().toString(36).substring(2, 10)}`;
     const cores = [3, 5, 7][Math.floor(Math.random() * 3)];
 
-    const state = {
-        provisioned: true,
-        instanceId: newId,
-        provisionedAt: Date.now(),
-        status: 'PROVISIONING',
-        metadata: {
-            internalIp: `172.17.0.${Math.floor(Math.random() * 254) + 1}`,
-            port: 8080,
-            region: 'us-central1-gen2',
-            cpuLimit: `${cores}.0`
-        }
-    };
-    
-    setVMState(newId, state);
+    // Call native MUMPS provisioner
+    engine.db.function("PROVISION^VMMGR", newId, cores.toString());
+    engine.db.function("INFO^LOG", `Initiated provisioning for ${newId}`);
 
-    const logDir = path.join(BASE_DIR, 'logs');
-    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
-    
-    const logPath = path.join(logDir, `${newId}.log`);
-    const logger = fs.createWriteStream(logPath);
-    logger.write(`--- PROVISIONING ${newId} ---\n`);
+    const state = getVMState(newId);
     
     setTimeout(() => {
-        state.status = 'RUNNING';
-        setVMState(newId, state);
-        logger.write(`PROVISION_COMPLETE: ${newId}\n`);
-        logger.end();
+        engine.db.function("COMPLETE^VMMGR", newId);
+        engine.db.function("INFO^LOG", `Provisioning complete for ${newId}`);
     }, 2000);
 
     res.send({ message: 'Provisioning initiated', instanceId: newId, ...state });
