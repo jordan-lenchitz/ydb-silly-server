@@ -1,0 +1,55 @@
+name: Go CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.26.x'
+
+    - name: Install YottaDB Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget gcc make pkg-config libicu-dev libncurses5-dev
+
+    - name: Install YottaDB
+      run: |
+        wget https://gitlab.com/YottaDB/DB/YDB/-/raw/master/sr_unix/ydbinstall.sh
+        chmod +x ydbinstall.sh
+        sudo ./ydbinstall.sh --utf8 default --verbose
+
+    - name: Set YottaDB Environment
+      run: |
+        echo "PKG_CONFIG_PATH=/usr/local/lib/pkgconfig" >> $GITHUB_ENV
+        # We need to find where ydb_env_set is or manually set paths
+        # Usually /usr/local/lib/yottadb/current/ or similar
+        # For simplicity in CI, we'll try to find the ydb dist
+        YDB_DIST=$(find /opt/yottadb -name ydb_env_set -exec dirname {} \;)
+        if [ -z "$YDB_DIST" ]; then YDB_DIST=$(find /usr/local/lib/yottadb -name ydb_env_set -exec dirname {} \;) ; fi
+        echo "YDB_DIST=$YDB_DIST" >> $GITHUB_ENV
+
+    - name: Build
+      run: |
+        # Source env and build
+        if [ -f "$YDB_DIST/ydb_env_set" ]; then
+          . "$YDB_DIST/ydb_env_set"
+        fi
+        go build -v ./...
+
+    - name: Test
+      run: |
+        if [ -f "$YDB_DIST/ydb_env_set" ]; then
+          . "$YDB_DIST/ydb_env_set"
+        fi
+        # We might need a database for integration tests, but utils_test is pure Go
+        go test -v ./...
