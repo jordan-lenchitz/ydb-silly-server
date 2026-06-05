@@ -46,3 +46,17 @@ func TestVMStatusEndpoint(t *testing.T) {
 		}
 	}
 }
+
+func TestExecuteNilSafety(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := setupRouter()
+
+	req, _ := http.NewRequest("POST", "/api/execute", nil)
+	w := httptest.NewRecorder()
+	
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected 400, got %v", w.Code)
+	}
+}

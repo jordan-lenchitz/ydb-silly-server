@@ -115,3 +115,22 @@ func TestSubstring(t *testing.T) {
 		}
 	}
 }
+
+func FuzzReverse(f *testing.F) {
+	f.Add("hello")
+	f.Add("🚀")
+	f.Fuzz(func(t *testing.T, orig string) {
+		rev := Reverse(orig)
+		doubleRev := Reverse(rev)
+		if orig != doubleRev {
+			t.Errorf("Before: %q, After: %q", orig, doubleRev)
+		}
+	})
+}
+
+func FuzzSubstring(f *testing.F) {
+	f.Add("hello", 1, 3)
+	f.Fuzz(func(t *testing.T, s string, start, end int) {
+		Substring(s, start, end)
+	})
+}
