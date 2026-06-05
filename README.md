@@ -1,19 +1,23 @@
-🚀 yottadb unironic backend v2.1.0 🚀
+🚀 yottadb unironic backend v3.0.0 (GO) 🚀
 
-blazing fast ⚡️ bloat free 🌬️ folders for all 📂
+blazing fast ⚡️ type safe 🛡️ gopher powered 🐹
 
 🏗️ architecture 🏗️
 
-node js proxy 🌐 yottadb native engine 🚂 mumps core logic 💉
+go gin proxy 🌐 yottadb native engine 🚂 mumps core logic 💉
 
 📦 features 📦
 
-native vm orchestration 🤖 high performance persistence 💾 system utility library 📚 all m logic 🚀
+native go-api orchestration 🤖 high performance persistence 💾 system utility library 📚 all m logic 🚀
 
 🛠️ setup 🛠️
 
-git clone 🌀 npm install 📦 bash entrypoint 🏃‍♂️
+git clone 🌀 go build 📦 source ydb_env_set 🏃‍♂️
+
+📦 go api docs 📦
+
+included in `/api/docs` and `/v1beta/api` 📚
 
 🌈 vibes 🌈
 
-more m less js 📈 zero punctuation 🚫 all lowercase 📉 pure mumps energy ⚡️
+more go less js 📈 zero punctuation 🚫 all lowercase 📉 pure gopher energy ⚡️

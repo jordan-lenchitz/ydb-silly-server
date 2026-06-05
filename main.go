@@ -16,8 +16,8 @@ import (
 )
 
 /**
- * 🚀 YOTTADB UNIRONIC BACKEND V3.0.0 (GO EDITION)
- * Blazing fast, Type-safe, Gopher-powered!
+ * 🚀 YOTTADB UNIRONIC BACKEND V4.0.0 (GO NATIVE)
+ * Pure Gopher logic, YottaDB Persistence.
  */
 
 const (
@@ -31,15 +31,9 @@ var (
 	m       *yottadb.MFunctions
 )
 
+// Minimal call table for remaining M logic (XExe)
 const mCallTable = `
-	Version: string VERSION^SYS()
-	Uptime: string UPTIME^SYS()
-	Provision: string PROVISION^VMMGR(string, string)
-	Complete: string COMPLETE^VMMGR(string)
-	GetVM: string GETVM^VMMGR(string, string)
-	GetMeta: string GETMETA^VMMGR(string, string)
 	XExe: int XEXE^XEXE(string)
-	LogInfo: void INFO^LOG(string)
 `
 
 type VMState struct {
@@ -73,30 +67,21 @@ func getVMState(id string) *VMState {
 		return nil
 	}
 
-	status, _ := m.CallErr("GetVM", id, "status")
-	if status == nil || status == "" {
+	status := GetVM(id, "status")
+	if status == "" {
 		return nil
 	}
 
-	instanceID, _ := m.CallErr("GetVM", id, "instanceId")
-	provisionedAt, _ := m.CallErr("GetVM", id, "provisionedAt")
-	provisioned, _ := m.CallErr("GetVM", id, "provisioned")
-
-	internalIP, _ := m.CallErr("GetMeta", id, "internalIp")
-	portStr, _ := m.CallErr("GetMeta", id, "port")
-	region, _ := m.CallErr("GetMeta", id, "region")
-	cpuLimit, _ := m.CallErr("GetMeta", id, "cpuLimit")
-
 	state := &VMState{
-		Status:        fmt.Sprintf("%v", status),
-		InstanceID:    fmt.Sprintf("%v", instanceID),
-		ProvisionedAt: fmt.Sprintf("%v", provisionedAt),
-		Provisioned:   provisioned == "1",
+		Status:        status,
+		InstanceID:    GetVM(id, "instanceId"),
+		ProvisionedAt: GetVM(id, "provisionedAt"),
+		Provisioned:   GetVM(id, "provisioned") == "1",
 		Metadata: map[string]interface{}{
-			"internalIp": internalIP,
-			"port":       portStr,
-			"region":     region,
-			"cpuLimit":   cpuLimit,
+			"internalIp": GetMeta(id, "internalIp"),
+			"port":       GetMeta(id, "port"),
+			"region":     GetMeta(id, "region"),
+			"cpuLimit":   GetMeta(id, "cpuLimit"),
 		},
 	}
 	return state
@@ -129,13 +114,10 @@ func main() {
 			state = &VMState{Status: "OFFLINE", Provisioned: false}
 		}
 
-		version, _ := m.CallErr("Version")
-		uptime, _ := m.CallErr("Uptime")
-
 		state.System = map[string]interface{}{
-			"engine":    version,
+			"engine":    yottadb.Version(),
 			"nativeJob": os.Getpid(),
-			"uptime":    uptime,
+			"uptime":    GetUptime(),
 		}
 
 		c.JSON(http.StatusOK, state)
@@ -145,15 +127,15 @@ func main() {
 		newID := fmt.Sprintf("ydb-%d", rand.Intn(100000000))
 		cores := []int{3, 5, 7}[rand.Intn(3)]
 
-		m.CallErr("Provision", newID, fmt.Sprintf("%d", cores))
-		m.CallErr("LogInfo", fmt.Sprintf("Initiated provisioning for %s", newID))
+		Provision(newID, fmt.Sprintf("%d", cores))
+		LogInfo(fmt.Sprintf("Initiated provisioning for %s", newID))
 
 		state := getVMState(newID)
 
 		go func() {
 			time.Sleep(2 * time.Second)
-			m.CallErr("Complete", newID)
-			m.CallErr("LogInfo", fmt.Sprintf("Provisioning complete for %s", newID))
+			Complete(newID)
+			LogInfo(fmt.Sprintf("Provisioning complete for %s", newID))
 		}()
 
 		c.JSON(http.StatusOK, gin.H{
@@ -172,19 +154,17 @@ func main() {
 			return
 		}
 
-		res, err := m.CallErr("XExe", req.MCode)
+		lineCount, err := XExe(req.MCode)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "status": "FAIL"})
 			return
 		}
 
-		lineCount := res.(int)
 		output := ""
 		jobID := os.Getpid()
 		
 		for i := 1; i <= lineCount; i++ {
-			node := conn.Node("^XOUT", jobID, i)
-			val := node.Get()
+			val := GetGlobal("XOUT", jobID, i)
 			output += val + "\n"
 		}
 
@@ -263,8 +243,7 @@ func main() {
 			}
 		}
 
-		node := conn.Node(name, subs...)
-		val := node.Get()
+		val := GetGlobal(name, subs...)
 		c.JSON(http.StatusOK, gin.H{"global": name, "subscripts": subs, "value": val})
 	})
 
@@ -284,8 +263,7 @@ func main() {
 			subs = append(subs, s)
 		}
 
-		node := conn.Node(name, subs...)
-		node.Set(req.Value)
+		SetGlobal(name, req.Value, subs...)
 		c.JSON(http.StatusOK, gin.H{"status": "OK"})
 	})
 
@@ -311,7 +289,7 @@ func main() {
 
 	fmt.Printf(`
     =========================================
-    🚀 YOTTADB NATIVE PROXY V3.0.0 (GO)
+    🚀 YOTTADB NATIVE PROXY V4.0.0 (GO)
     PORT: %s
     MODE: NATIVE (GO-API)
     BONAFIDES: GOPHERIZED ✅

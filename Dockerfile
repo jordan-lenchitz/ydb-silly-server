@@ -2,24 +2,24 @@ FROM yottadb/yottadb-debian:latest
 
 USER root
 
-# Install Node.js 20 and dependencies for mg-dbx-napi
+# Install Go and build dependencies
 RUN apt-get update && apt-get install -y \
-    curl \
-    g++ \
+    wget \
+    gcc \
     make \
-    python3 \
     pkg-config \
-    libssl-dev \
-    procps \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs
+    && wget https://go.dev/dl/go1.26.3.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf go1.26.3.linux-amd64.tar.gz \
+    && rm go1.26.3.linux-amd64.tar.gz
+
+ENV PATH=$PATH:/usr/local/go/bin
 
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
 COPY . .
 
-# Ensure /data exists and is writable
-RUN mkdir -p /data
+# Build the Go application
+# We need to source ydb_env_set for pkg-config to work during build if it's using it,
+# but usually we just need the CGO flags.
+RUN . /opt/yottadb/current/ydb_env_set && go build -o ydb-server .
 
 ENTRYPOINT ["/bin/bash", "/app/entrypoint.sh"]
