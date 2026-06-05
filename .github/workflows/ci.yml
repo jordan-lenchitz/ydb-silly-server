@@ -45,12 +45,11 @@ jobs:
         if [ -f "$YDB_DIST/ydb_env_set" ]; then
           . "$YDB_DIST/ydb_env_set"
         fi
-        go build -v ./...
+        cd go && go build -v ./...
 
     - name: Test
       run: |
         if [ -f "$YDB_DIST/ydb_env_set" ]; then
           . "$YDB_DIST/ydb_env_set"
         fi
-        # We might need a database for integration tests, but utils_test is pure Go
-        go test -v ./...
+        cd go && go test -v ./...

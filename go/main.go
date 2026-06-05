@@ -21,7 +21,7 @@ import (
  */
 
 const (
-	BaseDir = "/app"
+	BaseDir = "."
 )
 
 var (

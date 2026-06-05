@@ -18,8 +18,6 @@ WORKDIR /app
 COPY . .
 
 # Build the Go application
-# We need to source ydb_env_set for pkg-config to work during build if it's using it,
-# but usually we just need the CGO flags.
-RUN . /opt/yottadb/current/ydb_env_set && go build -o ydb-server .
+RUN . /opt/yottadb/current/ydb_env_set && cd go && go build -o ../ydb-server .
 
 ENTRYPOINT ["/bin/bash", "/app/entrypoint.sh"]

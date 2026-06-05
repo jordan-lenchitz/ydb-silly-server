@@ -6,7 +6,7 @@
 export ydb_dist=${ydb_dist:-/opt/yottadb/current}
 
 # Add local directory to routines
-export ydb_routines=". /app/MUMPS /app $ydb_routines"
+export ydb_routines=". ./MUMPS $ydb_routines"
 
 echo "--- YDB ENV ---"
 env | grep ydb
