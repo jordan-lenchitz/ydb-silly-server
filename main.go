@@ -64,7 +64,7 @@ func initYDB() {
 }
 
 func getVMState(id string) *VMState {
-	if id == "" {
+	if id == "" || conn == nil {
 		return nil
 	}
 

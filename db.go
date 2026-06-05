@@ -8,6 +8,10 @@ import (
 // --- LOG Utilities ---
 
 func LogWrite(lvl, msg string) {
+	if conn == nil {
+		fmt.Printf("[%s] (NO DB) %s\n", lvl, msg)
+		return
+	}
 	node := conn.Node("^YDBLOGS", lvl)
 	id := node.Incr(1)
 	
@@ -29,6 +33,9 @@ func LogError(msg string) {
 }
 
 func ReadLogs(lvl string, count int) string {
+	if conn == nil {
+		return ""
+	}
 	idVal := conn.Node("^YDBLOGS", lvl).Get()
 	if idVal == "" {
 		return ""
@@ -53,6 +60,9 @@ func ReadLogs(lvl string, count int) string {
 }
 
 func GetLogStats() string {
+	if conn == nil {
+		return ""
+	}
 	var res strings.Builder
 	node := conn.Node("^YDBLOGS")
 
@@ -65,6 +75,9 @@ func GetLogStats() string {
 }
 
 func ClearLogs(lvl string) {
+	if conn == nil {
+		return
+	}
 	if lvl == "" {
 		conn.Node("^YDBLOGS").Kill()
 	} else {
@@ -75,18 +88,30 @@ func ClearLogs(lvl string) {
 // --- DATA Utilities ---
 
 func GetGlobal(gbl string, subs ...any) string {
+	if conn == nil {
+		return ""
+	}
 	return conn.Node("^"+gbl, subs...).Get()
 }
 
 func SetGlobal(gbl string, val string, subs ...any) {
+	if conn == nil {
+		return
+	}
 	conn.Node("^"+gbl, subs...).Set(val)
 }
 
 func KillGlobal(gbl string, subs ...any) {
+	if conn == nil {
+		return
+	}
 	conn.Node("^"+gbl, subs...).Kill()
 }
 
 func GlobalExists(gbl string, subs ...any) bool {
+	if conn == nil {
+		return false
+	}
 	node := conn.Node("^"+gbl, subs...)
 	return !node.HasNone()
 }

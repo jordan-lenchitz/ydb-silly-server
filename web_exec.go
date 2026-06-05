@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/url"
 	"os"
 	"strconv"
@@ -42,16 +43,11 @@ func ParseHeaders(h string) map[string]string {
 // --- XEXE Utilities ---
 
 func XExe(code string) (int, error) {
+	if m == nil {
+		return 0, fmt.Errorf("engine not connected")
+	}
 	jobID := os.Getpid()
 	KillGlobal("XOUT", jobID)
-	
-	// Since the codebase is being refactored to Go, and M code execution is still required,
-	// we still need a way to call XECUTE in YottaDB.
-	// We will use the existing 'm' (MFunctions) for this until we fully remove it,
-	// OR we can implement a Go function that calls a generic M shim.
-	
-	// For now, let's assume we still have access to the 'm' instance in main.go
-	// or we use conn.MCall if we move the import.
 	
 	res, err := m.CallErr("XExe", code)
 	if err != nil {
