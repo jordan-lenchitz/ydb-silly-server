@@ -111,14 +111,15 @@ func Replace(s, old, new string) string {
 }
 
 func Substring(s string, start, end int) string {
+	runes := []rune(s)
 	if start < 1 {
 		start = 1
 	}
-	if end > len(s) {
-		end = len(s)
+	if end > len(runes) {
+		end = len(runes)
 	}
 	if start > end {
 		return ""
 	}
-	return s[start-1 : end]
+	return string(runes[start-1 : end])
 }

@@ -88,10 +88,7 @@ func getVMState(id string) *VMState {
 	return state
 }
 
-func main() {
-	initYDB()
-	defer yottadb.Shutdown(db)
-
+func setupRouter() *gin.Engine {
 	r := gin.Default()
 
 	// CORS Middleware
@@ -170,7 +167,7 @@ func main() {
 
 		output := ""
 		jobID := os.Getpid()
-		
+
 		for i := 1; i <= lineCount; i++ {
 			val := GetGlobal("XOUT", jobID, i)
 			output += val + "\n"
@@ -289,6 +286,14 @@ func main() {
 		content, _ := ioutil.ReadFile(filepath.Join(BaseDir, "MD/API_DOCS.md"))
 		c.String(http.StatusOK, string(content))
 	})
+	return r
+}
+
+func main() {
+	initYDB()
+	defer yottadb.Shutdown(db)
+
+	r := setupRouter()
 
 	port := os.Getenv("PORT")
 	if port == "" {
