@@ -134,3 +134,40 @@ func FuzzSubstring(f *testing.F) {
 		Substring(s, start, end)
 	})
 }
+
+func FuzzGCD(f *testing.F) {
+	f.Add(48, 18)
+	f.Fuzz(func(t *testing.T, a, b int) {
+		if a < 0 { a = -a }
+		if b < 0 { b = -b }
+		gcd := GCD(a, b)
+		if gcd != 0 {
+			if a%gcd != 0 || b%gcd != 0 {
+				t.Errorf("GCD(%d, %d) = %d; does not divide both", a, b, gcd)
+			}
+		}
+	})
+}
+
+func FuzzURL(f *testing.F) {
+	f.Add("hello world")
+	f.Add("🚀!@#$%^&*()")
+	f.Fuzz(func(t *testing.T, orig string) {
+		enc := URLEncode(orig)
+		dec, err := URLDecode(enc)
+		if err != nil {
+			t.Errorf("Decode error: %v", err)
+		}
+		if orig != dec {
+			t.Errorf("Roundtrip failed: %q -> %q -> %q", orig, enc, dec)
+		}
+	})
+}
+
+func FuzzParseHeaders(f *testing.F) {
+	f.Add("Host: localhost\nContent-Type: application/json")
+	f.Add("Malformed Header Without Colon")
+	f.Fuzz(func(t *testing.T, input string) {
+		ParseHeaders(input)
+	})
+}
