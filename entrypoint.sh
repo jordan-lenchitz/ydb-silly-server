@@ -1,30 +1,30 @@
 #!/bin/bash
-# Source YottaDB environment
+# source yottadb environment
 . /opt/yottadb/current/ydb_env_set
 
-# Manually export ydb_dist if it's missing
+# manually export ydb_dist if it is missing
 export ydb_dist=${ydb_dist:-/opt/yottadb/current}
 
-# Add local directory to routines
+# add local directory to routines
 export ydb_routines=". ./MUMPS $ydb_routines"
 
-echo "--- YDB ENV ---"
+echo "--- ydb env ---"
 env | grep ydb
 echo "---------------"
 
-# Initialize database directory if missing
+# initialize database directory if missing
 GBL_DIR=$(dirname "$ydb_gbldir")
 if [ ! -d "$GBL_DIR" ]; then
-    echo "Initializing YottaDB database directory $GBL_DIR..."
+    echo "initializing YottaDB database directory $GBL_DIR..."
     mkdir -p "$GBL_DIR"
     mupip create
 else
-    echo "Database exists. Running recovery..."
+    echo "database exists; running recovery..."
     mupip rundown -region "*"
     mupip journal -recover -backward "*" || true
     mupip rundown -region "*"
 fi
 
-# Start Go application
-echo "Starting Go application..."
+# start the application
+echo "starting go application..."
 ./ydb-server
