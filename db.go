@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"strings"
-
-	"lang.yottadb.com/go/yottadb/v2"
 )
 
 // --- LOG Utilities ---
@@ -53,13 +51,7 @@ func ReadLogs(lvl string, count int) string {
 	
 	return res.String()
 }
-import (
-	"fmt"
-	"strings"
-)
 
-// --- LOG Utilities ---
-...
 func GetLogStats() string {
 	var res strings.Builder
 	node := conn.Node("^YDBLOGS")
@@ -70,6 +62,14 @@ func GetLogStats() string {
 	}
 
 	return res.String()
+}
+
+func ClearLogs(lvl string) {
+	if lvl == "" {
+		conn.Node("^YDBLOGS").Kill()
+	} else {
+		conn.Node("^YDBLOGS", lvl).Kill()
+	}
 }
 
 // --- DATA Utilities ---
@@ -90,4 +90,3 @@ func GlobalExists(gbl string, subs ...any) bool {
 	node := conn.Node("^"+gbl, subs...)
 	return !node.HasNone()
 }
-
