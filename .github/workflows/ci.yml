@@ -30,12 +30,13 @@ jobs:
 
     - name: Set YottaDB Environment
       run: |
-        echo "PKG_CONFIG_PATH=/usr/local/lib/pkgconfig" >> $GITHUB_ENV
-        # We need to find where ydb_env_set is or manually set paths
-        # Usually /usr/local/lib/yottadb/current/ or similar
-        # For simplicity in CI, we'll try to find the ydb dist
-        YDB_DIST=$(find /opt/yottadb -name ydb_env_set -exec dirname {} \;)
-        if [ -z "$YDB_DIST" ]; then YDB_DIST=$(find /usr/local/lib/yottadb -name ydb_env_set -exec dirname {} \;) ; fi
+        echo "PKG_CONFIG_PATH=/usr/share/pkgconfig:/usr/local/lib/pkgconfig" >> $GITHUB_ENV
+        # We need to find where ydb_env_set is.
+        # The installer log says it's at /usr/local/lib/yottadb/r206
+        YDB_DIST=$(find /usr/local/lib/yottadb -name ydb_env_set -exec dirname {} \; 2>/dev/null | head -n 1)
+        if [ -z "$YDB_DIST" ]; then
+          YDB_DIST=$(find /opt/yottadb -name ydb_env_set -exec dirname {} \; 2>/dev/null | head -n 1)
+        fi
         echo "YDB_DIST=$YDB_DIST" >> $GITHUB_ENV
 
     - name: Build
