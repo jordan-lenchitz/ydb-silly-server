@@ -1,0 +1,322 @@
+package main
+
+import (
+	"fmt"
+	"io/ioutil"
+	"math/rand"
+	"net/http"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"lang.yottadb.com/go/yottadb/v2"
+)
+
+/**
+ * 🚀 YOTTADB UNIRONIC BACKEND V3.0.0 (GO EDITION)
+ * Blazing fast, Type-safe, Gopher-powered!
+ */
+
+const (
+	BaseDir = "/app"
+)
+
+var (
+	folders = []string{"MUMPS", "JS", "MD", "logs"}
+	db      *yottadb.DB
+	conn    *yottadb.Conn
+	m       *yottadb.MFunctions
+)
+
+const mCallTable = `
+	Version: string VERSION^SYS()
+	Uptime: string UPTIME^SYS()
+	Provision: string PROVISION^VMMGR(string, string)
+	Complete: string COMPLETE^VMMGR(string)
+	GetVM: string GETVM^VMMGR(string, string)
+	GetMeta: string GETMETA^VMMGR(string, string)
+	XExe: int XEXE^XEXE(string)
+	LogInfo: void INFO^LOG(string)
+`
+
+type VMState struct {
+	Status        string                 `json:"status"`
+	InstanceID    string                 `json:"instanceId"`
+	ProvisionedAt string                 `json:"provisionedAt"`
+	Provisioned   bool                   `json:"provisioned"`
+	Metadata      map[string]interface{} `json:"metadata"`
+	System        map[string]interface{} `json:"system"`
+}
+
+func initYDB() {
+	fmt.Println("--- ⚡ BOOTING YOTTADB NATIVE ENGINE (GO) ---")
+	var err error
+	db, err = yottadb.Init()
+	if err != nil {
+		fmt.Printf("[ENGINE] Initialization Failed: %v\n", err)
+		os.Exit(1)
+	}
+	conn = yottadb.NewConn()
+	m, err = conn.Import(mCallTable)
+	if err != nil {
+		fmt.Printf("[ENGINE] Import Failed: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println("[ENGINE] Connected.")
+}
+
+func getVMState(id string) *VMState {
+	if id == "" {
+		return nil
+	}
+
+	status, _ := m.CallErr("GetVM", id, "status")
+	if status == nil || status == "" {
+		return nil
+	}
+
+	instanceID, _ := m.CallErr("GetVM", id, "instanceId")
+	provisionedAt, _ := m.CallErr("GetVM", id, "provisionedAt")
+	provisioned, _ := m.CallErr("GetVM", id, "provisioned")
+
+	internalIP, _ := m.CallErr("GetMeta", id, "internalIp")
+	portStr, _ := m.CallErr("GetMeta", id, "port")
+	region, _ := m.CallErr("GetMeta", id, "region")
+	cpuLimit, _ := m.CallErr("GetMeta", id, "cpuLimit")
+
+	state := &VMState{
+		Status:        fmt.Sprintf("%v", status),
+		InstanceID:    fmt.Sprintf("%v", instanceID),
+		ProvisionedAt: fmt.Sprintf("%v", provisionedAt),
+		Provisioned:   provisioned == "1",
+		Metadata: map[string]interface{}{
+			"internalIp": internalIP,
+			"port":       portStr,
+			"region":     region,
+			"cpuLimit":   cpuLimit,
+		},
+	}
+	return state
+}
+
+func main() {
+	initYDB()
+	defer yottadb.Shutdown(db)
+
+	r := gin.Default()
+
+	// CORS Middleware
+	r.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, X-VM-ID")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusOK)
+			return
+		}
+		c.Next()
+	})
+
+	// API Endpoints
+
+	r.GET("/api/vm/status", func(c *gin.Context) {
+		vmID := c.GetHeader("X-VM-ID")
+		state := getVMState(vmID)
+		if state == nil {
+			state = &VMState{Status: "OFFLINE", Provisioned: false}
+		}
+
+		version, _ := m.CallErr("Version")
+		uptime, _ := m.CallErr("Uptime")
+
+		state.System = map[string]interface{}{
+			"engine":    version,
+			"nativeJob": os.Getpid(),
+			"uptime":    uptime,
+		}
+
+		c.JSON(http.StatusOK, state)
+	})
+
+	r.POST("/api/vm/provision", func(c *gin.Context) {
+		newID := fmt.Sprintf("ydb-%d", rand.Intn(100000000))
+		cores := []int{3, 5, 7}[rand.Intn(3)]
+
+		m.CallErr("Provision", newID, fmt.Sprintf("%d", cores))
+		m.CallErr("LogInfo", fmt.Sprintf("Initiated provisioning for %s", newID))
+
+		state := getVMState(newID)
+
+		go func() {
+			time.Sleep(2 * time.Second)
+			m.CallErr("Complete", newID)
+			m.CallErr("LogInfo", fmt.Sprintf("Provisioning complete for %s", newID))
+		}()
+
+		c.JSON(http.StatusOK, gin.H{
+			"message":    "Provisioning initiated",
+			"instanceId": newID,
+			"state":      state,
+		})
+	})
+
+	executeHandler := func(c *gin.Context) {
+		var req struct {
+			MCode string `json:"mCode"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "No code provided"})
+			return
+		}
+
+		res, err := m.CallErr("XExe", req.MCode)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "status": "FAIL"})
+			return
+		}
+
+		lineCount := res.(int)
+		output := ""
+		jobID := os.Getpid()
+		
+		for i := 1; i <= lineCount; i++ {
+			node := conn.Node("^XOUT", jobID, i)
+			val := node.Get()
+			output += val + "\n"
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"output": strings.TrimSpace(output),
+			"status": "OK",
+			"method": "NATIVE",
+		})
+	}
+
+	r.POST("/execute", executeHandler)
+	r.POST("/api/execute", executeHandler)
+
+	r.GET("/api/files", func(c *gin.Context) {
+		type FileInfo struct {
+			Name   string `json:"name"`
+			Folder string `json:"folder"`
+			Path   string `json:"path"`
+			Suffix string `json:"suffix"`
+		}
+		var allFiles []FileInfo
+
+		for _, folder := range folders {
+			dirPath := filepath.Join(BaseDir, folder)
+			files, err := ioutil.ReadDir(dirPath)
+			if err == nil {
+				for _, f := range files {
+					if !f.IsDir() {
+						allFiles = append(allFiles, FileInfo{
+							Name:   f.Name(),
+							Folder: folder,
+							Path:   filepath.Join(folder, f.Name()),
+							Suffix: strings.ToLower(filepath.Ext(f.Name())),
+						})
+					}
+				}
+			}
+		}
+
+		// Root files
+		files, err := ioutil.ReadDir(BaseDir)
+		if err == nil {
+			for _, f := range files {
+				if !f.IsDir() {
+					allFiles = append(allFiles, FileInfo{
+						Name:   f.Name(),
+						Folder: "/",
+						Path:   f.Name(),
+						Suffix: strings.ToLower(filepath.Ext(f.Name())),
+					})
+				}
+			}
+		}
+
+		// Sort by suffix ONLY
+		sort.Slice(allFiles, func(i, j int) bool {
+			if allFiles[i].Suffix < allFiles[j].Suffix {
+				return true
+			}
+			if allFiles[i].Suffix > allFiles[j].Suffix {
+				return false
+			}
+			return allFiles[i].Name < allFiles[j].Name
+		})
+
+		c.JSON(http.StatusOK, gin.H{"files": allFiles})
+	})
+
+	r.GET("/api/global/:name", func(c *gin.Context) {
+		name := c.Param("name")
+		subsStr := c.Query("subs")
+		var subs []any
+		if subsStr != "" {
+			for _, s := range strings.Split(subsStr, ",") {
+				subs = append(subs, s)
+			}
+		}
+
+		node := conn.Node(name, subs...)
+		val := node.Get()
+		c.JSON(http.StatusOK, gin.H{"global": name, "subscripts": subs, "value": val})
+	})
+
+	r.POST("/api/global/:name", func(c *gin.Context) {
+		name := c.Param("name")
+		var req struct {
+			Subscripts []string `json:"subscripts"`
+			Value      string   `json:"value"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		var subs []any
+		for _, s := range req.Subscripts {
+			subs = append(subs, s)
+		}
+
+		node := conn.Node(name, subs...)
+		node.Set(req.Value)
+		c.JSON(http.StatusOK, gin.H{"status": "OK"})
+	})
+
+	// Documentation Route
+	r.GET("/api/docs", func(c *gin.Context) {
+		content, err := ioutil.ReadFile(filepath.Join(BaseDir, "MD/API_DOCS.md"))
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Documentation not found")
+			return
+		}
+		c.Data(http.StatusOK, "text/markdown; charset=utf-8", content)
+	})
+
+	r.GET("/v1beta/api", func(c *gin.Context) {
+		content, _ := ioutil.ReadFile(filepath.Join(BaseDir, "MD/API_DOCS.md"))
+		c.String(http.StatusOK, string(content))
+	})
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	fmt.Printf(`
+    =========================================
+    🚀 YOTTADB NATIVE PROXY V3.0.0 (GO)
+    PORT: %s
+    MODE: NATIVE (GO-API)
+    BONAFIDES: GOPHERIZED ✅
+    =========================================
+    `, port)
+
+	r.Run(":" + port)
+}
