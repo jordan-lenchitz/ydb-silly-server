@@ -115,7 +115,7 @@ func main() {
 		}
 
 		state.System = map[string]interface{}{
-			"engine":    yottadb.Version(),
+			"engine":    yottadb.EngineVersion(),
 			"nativeJob": os.Getpid(),
 			"uptime":    GetUptime(),
 		}

@@ -53,27 +53,22 @@ func ReadLogs(lvl string, count int) string {
 	
 	return res.String()
 }
+import (
+	"fmt"
+	"strings"
+)
 
-func ClearLogs(lvl string) {
-	if lvl == "" {
-		conn.Node("^YDBLOGS").Kill()
-	} else {
-		conn.Node("^YDBLOGS", lvl).Kill()
-	}
-}
-
+// --- LOG Utilities ---
+...
 func GetLogStats() string {
 	var res strings.Builder
 	node := conn.Node("^YDBLOGS")
-	
-	curr, err := node.SubscriptNext("")
-	for err == nil && curr != nil {
-		lvl := curr.(string)
+
+	for _, lvl := range node.Children() {
 		count := conn.Node("^YDBLOGS", lvl).Get()
 		res.WriteString(fmt.Sprintf("%s:%s;", lvl, count))
-		curr, err = node.SubscriptNext(lvl)
 	}
-	
+
 	return res.String()
 }
 
@@ -92,14 +87,7 @@ func KillGlobal(gbl string, subs ...any) {
 }
 
 func GlobalExists(gbl string, subs ...any) bool {
-	// yottadb-go doesn't have a direct $D equivalent that returns 0-11,
-	// but Get() returning empty might mean not exists, or we can use SubscriptNext.
-	// Actually, let's just check if Get returns something or has children.
-	val := conn.Node("^"+gbl, subs...).Get()
-	if val != "" {
-		return true
-	}
-	// Check for children
-	next, _ := conn.Node("^"+gbl, subs...).SubscriptNext("")
-	return next != nil
+	node := conn.Node("^"+gbl, subs...)
+	return !node.HasNone()
 }
+
