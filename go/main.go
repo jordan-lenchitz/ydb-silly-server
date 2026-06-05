@@ -25,7 +25,7 @@ const (
 )
 
 var (
-	folders = []string{"MUMPS", "JS", "MD", "logs"}
+	folders = []string{"mumps", "js", "md", "logs"}
 	db      *yottadb.DB
 	conn    *yottadb.Conn
 	m       *yottadb.MFunctions
@@ -274,7 +274,7 @@ func setupRouter() *gin.Engine {
 
 	// Documentation Route
 	r.GET("/api/docs", func(c *gin.Context) {
-		content, err := ioutil.ReadFile(filepath.Join(BaseDir, "MD/API_DOCS.md"))
+		content, err := ioutil.ReadFile(filepath.Join(BaseDir, "md/API_DOCS.md"))
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Documentation not found")
 			return
@@ -283,7 +283,7 @@ func setupRouter() *gin.Engine {
 	})
 
 	r.GET("/v1beta/api", func(c *gin.Context) {
-		content, _ := ioutil.ReadFile(filepath.Join(BaseDir, "MD/API_DOCS.md"))
+		content, _ := ioutil.ReadFile(filepath.Join(BaseDir, "md/API_DOCS.md"))
 		c.String(http.StatusOK, string(content))
 	})
 	return r
