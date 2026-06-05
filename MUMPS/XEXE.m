@@ -13,3 +13,6 @@ XEXE(CODE) ; 🚀 THE UNHOLY EXECUTIONER
  CLOSE %FN
  ZSYSTEM "rm "_%FN
  QUIT %I ; Return number of lines
+
+VERSION() ; Get YottaDB version
+ QUIT $ZVERSION

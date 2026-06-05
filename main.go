@@ -34,6 +34,7 @@ var (
 // Minimal call table for remaining M logic (XExe)
 const mCallTable = `
 	XExe: int XEXE^XEXE(string)
+	Version: string VERSION^XEXE()
 `
 
 type VMState struct {
@@ -114,8 +115,15 @@ func main() {
 			state = &VMState{Status: "OFFLINE", Provisioned: false}
 		}
 
+		engineVer := yottadb.WrapperRelease
+		if m != nil {
+			if v, err := m.CallErr("Version"); err == nil && v != nil {
+				engineVer = v.(string)
+			}
+		}
+
 		state.System = map[string]interface{}{
-			"engine":    yottadb.EngineVersion(),
+			"engine":    engineVer,
 			"nativeJob": os.Getpid(),
 			"uptime":    GetUptime(),
 		}
