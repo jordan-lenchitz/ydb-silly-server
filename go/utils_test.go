@@ -171,3 +171,41 @@ func FuzzParseHeaders(f *testing.F) {
 		ParseHeaders(input)
 	})
 }
+
+
+func BenchmarkFactorial(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		Factorial(20)
+	}
+}
+
+func BenchmarkReverse(b *testing.B) {
+	s := "The quick brown 🚀 jumps over the lazy 🐕"
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		Reverse(s)
+	}
+}
+
+func BenchmarkReverseParallel(b *testing.B) {
+	s := "The quick brown 🚀 jumps over the lazy 🐕"
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			Reverse(s)
+		}
+	})
+}
+
+func BenchmarkSubstring(b *testing.B) {
+	s := "The quick brown 🚀 jumps over the lazy 🐕"
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		Substring(s, 5, 20)
+	}
+}
+
+func BenchmarkGCD(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		GCD(1234567, 7654321)
+	}
+}
