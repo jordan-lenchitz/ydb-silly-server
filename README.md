@@ -1,6 +1,6 @@
 # `ydb-silly-server`
 
-a silly convergence of golang and MUMPS for persistent `^globals` with rigid routing
+a convergence of `go` and `MUMPS` for persistent `^globals` with rigid routing
 
 ## the five rules of `ydb-silly-server`
 - abbreviate everything like `$D` always never `dollar data`
@@ -23,8 +23,7 @@ a silly convergence of golang and MUMPS for persistent `^globals` with rigid rou
 - `get /api/files` to list the contents of the workspace sorted by suffix
 
 ## install
-1 ydb_chset=utf-8
-2 place mumps/ in your routine path
-3 run the go proxy
-
-; eof
+- `ydb_chset=utf-8`
+- place `mumps/` in your routine path
+- run the go proxy
+- `; eof`
