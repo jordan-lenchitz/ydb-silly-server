@@ -12,6 +12,7 @@ func TestFactorial(t *testing.T) {
 		{0, 1},
 		{1, 1},
 		{5, 120},
+		{7, 5040},
 	}
 	for _, c := range cases {
 		got := Factorial(c.n)
@@ -22,14 +23,24 @@ func TestFactorial(t *testing.T) {
 }
 
 func TestIsPrime(t *testing.T) {
-	if !IsPrime(2) {
-		t.Error("2 should be prime")
+	cases := []struct {
+		n    int
+		want bool
+	}{
+		{-5, false},
+		{0, false},
+		{1, false},
+		{2, true},
+		{3, true},
+		{4, false},
+		{9, false},
+		{17, true},
+		{97, true},
 	}
-	if IsPrime(4) {
-		t.Error("4 should not be prime")
-	}
-	if !IsPrime(17) {
-		t.Error("17 should be prime")
+	for _, c := range cases {
+		if got := IsPrime(c.n); got != c.want {
+			t.Errorf("IsPrime(%d) = %v, want %v", c.n, got, c.want)
+		}
 	}
 }
 
@@ -58,11 +69,27 @@ func TestLCM(t *testing.T) {
 		{4, 6, 12},
 		{5, 7, 35},
 		{0, 5, 0},
+		{5, 0, 0},
 	}
 	for _, c := range cases {
 		if got := LCM(c.a, c.b); got != c.want {
 			t.Errorf("LCM(%d, %d) = %d; want %d", c.a, c.b, got, c.want)
 		}
+	}
+}
+
+func TestAbsPowRound(t *testing.T) {
+	if got := Abs(-42); got != 42 {
+		t.Errorf("Abs(-42) = %d, want 42", got)
+	}
+	if got := Abs(42); got != 42 {
+		t.Errorf("Abs(42) = %d, want 42", got)
+	}
+	if got := Pow(2, 10); got != 1024 {
+		t.Errorf("Pow(2, 10) = %d, want 1024", got)
+	}
+	if got := Round(3.14159, 2); got != 3.14 {
+		t.Errorf("Round(3.14159, 2) = %v, want 3.14", got)
 	}
 }
 
@@ -92,6 +119,43 @@ func TestReverse(t *testing.T) {
 	}
 	if got := Reverse("🚀🚀"); got != "🚀🚀" {
 		t.Errorf("Reverse(\"🚀🚀\") = %s; want \"🚀🚀\"", got)
+	}
+}
+
+func TestStringAndSysHelpers(t *testing.T) {
+	if got := Upper("ydb"); got != "YDB" {
+		t.Errorf("Upper(ydb) = %q, want YDB", got)
+	}
+	if got := Lower("MUMPS"); got != "mumps" {
+		t.Errorf("Lower(MUMPS) = %q, want mumps", got)
+	}
+	if got := Trim("  \t hello \n "); got != "hello" {
+		t.Errorf("Trim = %q, want hello", got)
+	}
+	if got := Replace("a-b-c", "-", "_"); got != "a_b_c" {
+		t.Errorf("Replace = %q, want a_b_c", got)
+	}
+	if up := GetUptime(); up == "" {
+		t.Error("Expected non-empty GetUptime()")
+	}
+	if dt := GetDateTime(); len(dt) != 19 {
+		t.Errorf("Expected 19-char datetime, got %q", dt)
+	}
+}
+
+func TestWebHelpers(t *testing.T) {
+	enc := URLEncode("hello 🚀")
+	dec, err := URLDecode(enc)
+	if err != nil || dec != "hello 🚀" {
+		t.Errorf("URLEncode/URLDecode roundtrip failed: %q (err=%v)", dec, err)
+	}
+	val, err := HexToDec("ff")
+	if err != nil || val != 255 {
+		t.Errorf("HexToDec(ff) = %d (err=%v), want 255", val, err)
+	}
+	hdrs := ParseHeaders("Host: localhost:8080\nX-VM-ID: ydb-123\nMalformedLine\n")
+	if hdrs["Host"] != "localhost:8080" || hdrs["X-VM-ID"] != "ydb-123" {
+		t.Errorf("ParseHeaders unexpected map: %v", hdrs)
 	}
 }
 
@@ -138,8 +202,12 @@ func FuzzSubstring(f *testing.F) {
 func FuzzGCD(f *testing.F) {
 	f.Add(48, 18)
 	f.Fuzz(func(t *testing.T, a, b int) {
-		if a < 0 { a = -a }
-		if b < 0 { b = -b }
+		if a < 0 {
+			a = -a
+		}
+		if b < 0 {
+			b = -b
+		}
 		gcd := GCD(a, b)
 		if gcd != 0 {
 			if a%gcd != 0 || b%gcd != 0 {
@@ -171,7 +239,6 @@ func FuzzParseHeaders(f *testing.F) {
 		ParseHeaders(input)
 	})
 }
-
 
 func BenchmarkFactorial(b *testing.B) {
 	for i := 0; i < b.N; i++ {

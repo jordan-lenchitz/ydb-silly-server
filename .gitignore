@@ -8,6 +8,10 @@ ydb-data/
 *.dat
 *.mjl
 *.gld
+*.o
+mumps/ZEMOJI.m
+ydb-server
+
 
 # Logs
 logs/

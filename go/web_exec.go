@@ -19,7 +19,7 @@ func URLDecode(s string) (string, error) {
 }
 
 func HexToDec(h string) (int64, error) {
-	return strconv.ParseInt(h, 16, 64)
+	return strconv.ParseInt(strings.TrimSpace(h), 16, 64)
 }
 
 func ParseHeaders(h string) map[string]string {
@@ -34,25 +34,47 @@ func ParseHeaders(h string) map[string]string {
 		if len(parts) == 2 {
 			key := strings.TrimSpace(parts[0])
 			val := strings.TrimSpace(parts[1])
-			headers[key] = val
+			if key != "" {
+				headers[key] = val
+			}
 		}
 	}
 	return headers
 }
 
-// --- XEXE Utilities ---
+// --- MUMPS Call-In & XEXE Utilities ---
+
+func CallM(fn string, args ...any) (any, error) {
+	dbMu.Lock()
+	defer dbMu.Unlock()
+	if m == nil {
+		return nil, fmt.Errorf("engine not connected")
+	}
+	return m.CallErr(fn, args...)
+}
 
 func XExe(code string) (int, error) {
-	if m == nil {
+	if !IsDBConnected() {
 		return 0, fmt.Errorf("engine not connected")
 	}
 	jobID := os.Getpid()
 	KillGlobal("XOUT", jobID)
-	
-	res, err := m.CallErr("XExe", code)
+
+	res, err := CallM("XExe", code)
 	if err != nil {
 		return 0, err
 	}
-	
+
 	return res.(int), nil
+}
+
+func EvalM(expr string) (string, error) {
+	res, err := CallM("Eval", expr)
+	if err != nil {
+		return "", err
+	}
+	if s, ok := res.(string); ok {
+		return s, nil
+	}
+	return fmt.Sprintf("%v", res), nil
 }

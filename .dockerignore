@@ -1,0 +1,11 @@
+.git
+ydb-data
+*.dat
+*.mjl
+*.gld
+*.o
+mumps/ZEMOJI.m
+ydb-server
+logs
+build
+*.log
