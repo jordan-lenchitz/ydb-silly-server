@@ -8,26 +8,36 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    name: Build & Test (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v7
       with:
         go-version: '1.26.x'
+        cache-dependency-path: go/go.sum
 
     - name: Install YottaDB Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget gcc make pkg-config libicu-dev libncurses5-dev
+        sudo apt-get install -y file binutils libelf-dev libicu-dev libncurses-dev wget gcc make pkg-config
 
     - name: Install YottaDB
       run: |
-        wget https://gitlab.com/YottaDB/DB/YDB/-/raw/master/sr_unix/ydbinstall.sh
+        wget -q https://download.yottadb.com/ydbinstall.sh
         chmod +x ydbinstall.sh
         sudo ./ydbinstall.sh --utf8 default --verbose
 
@@ -64,24 +74,52 @@ jobs:
 
     - name: Log in to GitHub Container Registry (ghcr.io)
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: docker/login-action@v3
+      uses: docker/login-action@v4
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build and push x86_64 image to ghcr.io
+    - name: Build and push ${{ matrix.arch }} image to ghcr.io
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
         rm -f ydbinstall.sh mumps/ZEMOJI.m mumps/*.o
         IMAGE_REPO="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
-        docker build --platform linux/amd64 --provenance=false \
-          -t "${IMAGE_REPO}:latest" \
-          -t "${IMAGE_REPO}:${{ github.sha }}" .
-        for tag in "latest" "${{ github.sha }}"; do
+        docker build --platform "linux/${{ matrix.arch }}" --provenance=false \
+          -t "${IMAGE_REPO}:latest-${{ matrix.arch }}" \
+          -t "${IMAGE_REPO}:${{ github.sha }}-${{ matrix.arch }}" .
+        docker run --rm "${IMAGE_REPO}:latest-${{ matrix.arch }}" test
+        for tag in "latest-${{ matrix.arch }}" "${{ github.sha }}-${{ matrix.arch }}"; do
           for attempt in 1 2 3; do
             docker push "${IMAGE_REPO}:${tag}" && break
             echo "Retrying push for ${tag} (attempt ${attempt})..."
             sleep 3
           done
         done
+
+  merge-manifest:
+    name: Merge Multi-Arch Manifest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - name: Log in to GitHub Container Registry (ghcr.io)
+      uses: docker/login-action@v4
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create and push multi-arch manifests
+      run: |
+        IMAGE_REPO="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+        for tag in "latest" "${{ github.sha }}"; do
+          docker buildx imagetools create \
+            -t "${IMAGE_REPO}:${tag}" \
+            "${IMAGE_REPO}:${tag}-amd64" \
+            "${IMAGE_REPO}:${tag}-arm64"
+        done
+        docker buildx imagetools inspect "${IMAGE_REPO}:latest"

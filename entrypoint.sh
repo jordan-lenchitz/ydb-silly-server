@@ -18,8 +18,8 @@ mkdir -p "$ydb_dir"
 # Source YottaDB environment (sets ydb_dist, ydb_gbldir, ydb_routines, etc.)
 . "$YDB_DIST_DIR/ydb_env_set"
 
-# Recover/rundown existing database files if container hostname changed or after unclean stop
-for dat in "$ydb_dir"/*/g/*.dat; do
+# Recover/rundown existing database files for this architecture if container hostname changed or after unclean stop
+for dat in "$ydb_dir"/${ydb_rel:-*}/g/*.dat; do
     if [ -f "$dat" ]; then
         "$ydb_dist/mupip" rundown -file "$dat" 2>/dev/null || true
     fi

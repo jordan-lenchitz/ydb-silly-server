@@ -1,4 +1,6 @@
-.PHONY: install-ydb test test-mumps bench run mumps-xexe mumps-zsrv docker-build docker-up docker-down
+.PHONY: install-ydb test test-mumps bench run mumps-xexe mumps-zsrv docker-build docker-push docker-up docker-down
+
+PLATFORM ?= linux/$(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 
 YDB_ENV = YDB_DIST=$$(find /usr/local/lib/yottadb /opt/yottadb -name ydb_env_set -exec dirname {} \; 2>/dev/null | head -n 1); \
 	export ydb_chset=UTF-8; \
@@ -31,7 +33,7 @@ mumps-zsrv:
 	@$(YDB_ENV); "$$ydb_dist/yottadb" -run ^ZSRV
 
 docker-build:
-	docker build --platform linux/amd64 -t ydb-silly-server:latest -t ghcr.io/jordan-lenchitz/ydb-silly-server:latest .
+	docker build --platform $(PLATFORM) -t ydb-silly-server:latest -t ghcr.io/jordan-lenchitz/ydb-silly-server:latest .
 
 docker-push: docker-build
 	docker push ghcr.io/jordan-lenchitz/ydb-silly-server:latest

@@ -26,8 +26,11 @@ RUN mkdir -p /tmp/tmp && cd /tmp/tmp \
     && ./ydbinstall.sh --utf8 default --installdir /opt/yottadb/current \
     && rm -rf /tmp/tmp
 
+ARG TARGETARCH
+
 # Install Go 1.26.3
-RUN wget -q https://go.dev/dl/go1.26.3.linux-amd64.tar.gz -O /tmp/go.tar.gz \
+RUN ARCH="${TARGETARCH:-$(dpkg --print-architecture)}" \
+    && wget -q "https://go.dev/dl/go1.26.3.linux-${ARCH}.tar.gz" -O /tmp/go.tar.gz \
     && tar -C /usr/local -xzf /tmp/go.tar.gz \
     && rm -f /tmp/go.tar.gz
 
